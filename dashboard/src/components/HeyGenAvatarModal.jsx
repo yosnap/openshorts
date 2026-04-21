@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { X, User, Loader, Check, Download, AlertCircle } from 'lucide-react';
 import { getApiUrl } from '../config';
+import HeyGenVoiceSelector from './HeyGenVoiceSelector';
 
 const POLL_INTERVAL = 3000;
 
@@ -166,24 +167,18 @@ export default function HeyGenAvatarModal({ isOpen, onClose, transcript, heygenA
             </div>
           </div>
 
-          {/* Voice + background */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-zinc-500 mb-1 block">Voice</label>
-              <select
-                value={selectedVoice}
-                onChange={e => setSelectedVoice(e.target.value)}
-                className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50"
-              >
-                {voices.map(v => <option key={v.voice_id} value={v.voice_id}>{v.name}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-xs text-zinc-500 mb-1 block">Background</label>
-              <div className="flex items-center gap-2 bg-black/30 border border-white/10 rounded-xl px-3 py-2">
-                <input type="color" value={backgroundColor} onChange={e => setBackgroundColor(e.target.value)} className="w-6 h-6 rounded cursor-pointer bg-transparent border-0" />
-                <span className="text-xs text-zinc-400">{backgroundColor}</span>
-              </div>
+          {/* Voice */}
+          <div>
+            <label className="text-xs text-zinc-500 mb-1 block">Voice</label>
+            <HeyGenVoiceSelector voices={voices} value={selectedVoice} onChange={setSelectedVoice} />
+          </div>
+
+          {/* Background */}
+          <div>
+            <label className="text-xs text-zinc-500 mb-1 block">Background</label>
+            <div className="flex items-center gap-2 bg-black/30 border border-white/10 rounded-xl px-3 py-2 w-fit">
+              <input type="color" value={backgroundColor} onChange={e => setBackgroundColor(e.target.value)} className="w-6 h-6 rounded cursor-pointer bg-transparent border-0" />
+              <span className="text-xs text-zinc-400">{backgroundColor}</span>
             </div>
           </div>
 

@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { User, Mic, Upload, Play, Video, Loader, Check, Download, AlertCircle } from 'lucide-react';
 import { getApiUrl } from '../config';
+import HeyGenVoiceSelector from './HeyGenVoiceSelector';
 
 const POLL_INTERVAL = 3000;
 
@@ -232,15 +233,7 @@ export default function HeyGenTab({ heygenApiKey }) {
                   placeholder="Write the script for your avatar to speak..."
                 />
                 <label className="text-xs text-zinc-500 mb-1 block">Voice</label>
-                <select
-                  value={selectedVoice}
-                  onChange={e => setSelectedVoice(e.target.value)}
-                  className="w-full bg-black/30 border border-white/10 rounded-xl px-3 py-2 text-sm text-white focus:outline-none focus:border-primary/50"
-                >
-                  {voices.map(v => (
-                    <option key={v.voice_id} value={v.voice_id}>{v.name} {v.language ? `(${v.language})` : ''}</option>
-                  ))}
-                </select>
+                <HeyGenVoiceSelector voices={voices} value={selectedVoice} onChange={setSelectedVoice} />
               </>
             ) : (
               <>
