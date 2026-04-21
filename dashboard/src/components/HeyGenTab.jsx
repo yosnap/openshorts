@@ -39,7 +39,6 @@ export default function HeyGenTab({ heygenApiKey }) {
   const [mode, setMode] = useState('script'); // 'script' | 'lipsync'
   const [scriptText, setScriptText] = useState('');
   const [audioFile, setAudioFile] = useState(null);
-  const [userPhotoFile, setUserPhotoFile] = useState(null);
   const [backgroundColor, setBackgroundColor] = useState('#000000');
   const [jobId, setJobId] = useState(null);
   const [status, setStatus] = useState(null);
@@ -103,19 +102,8 @@ export default function HeyGenTab({ heygenApiKey }) {
     setLogs([]);
 
     try {
-      // Upload user photo if provided
-      let talkingPhotoId = selectedAvatar.type === 'talking_photo' ? selectedAvatar.id : null;
-      let avatarId = selectedAvatar.type === 'avatar' ? selectedAvatar.id : null;
-
-      if (userPhotoFile) {
-        const photoForm = new FormData();
-        photoForm.append('file', userPhotoFile);
-        const uploadRes = await fetch(getApiUrl('/api/heygen/upload'), { method: 'POST', headers, body: photoForm });
-        if (!uploadRes.ok) throw new Error('Photo upload failed');
-        const uploadData = await uploadRes.json();
-        talkingPhotoId = uploadData.asset_id;
-        avatarId = null;
-      }
+      const talkingPhotoId = selectedAvatar.type === 'talking_photo' ? selectedAvatar.id : null;
+      const avatarId = selectedAvatar.type === 'avatar' ? selectedAvatar.id : null;
 
       // Upload audio for lip sync
       let audioAssetId = null;
@@ -168,7 +156,7 @@ export default function HeyGenTab({ heygenApiKey }) {
       <div className="max-w-6xl mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-bold flex items-center gap-2"><User size={24} className="text-primary" /> Avatar Videos</h1>
-          <p className="text-sm text-zinc-500 mt-1">Generate 9:16 avatar shorts with HeyGen — lip sync, custom voice, or your own photo</p>
+          <p className="text-sm text-zinc-500 mt-1">Generate 9:16 avatar shorts with HeyGen — lip sync or script with any avatar</p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -176,37 +164,31 @@ export default function HeyGenTab({ heygenApiKey }) {
           <div className="glass-panel p-5">
             <h2 className="font-semibold mb-3 flex items-center gap-2"><User size={16} /> 1. Choose Avatar</h2>
 
-            {/* Upload own photo */}
-            <label className="block mb-4 cursor-pointer">
-              <div className={`border-2 border-dashed rounded-xl p-3 text-center transition-colors ${userPhotoFile ? 'border-primary bg-primary/5' : 'border-white/10 hover:border-white/30'}`}>
-                {userPhotoFile ? (
-                  <p className="text-xs text-primary"><Check size={12} className="inline mr-1" />{userPhotoFile.name}</p>
-                ) : (
-                  <p className="text-xs text-zinc-500"><Upload size={12} className="inline mr-1" />Use your own photo</p>
-                )}
-              </div>
-              <input type="file" accept="image/jpeg,image/png" className="hidden" onChange={e => { setUserPhotoFile(e.target.files[0] || null); setSelectedAvatar(null); }} />
-            </label>
+            {/* Own photo tip */}
+            <a
+              href="https://app.heygen.com/avatars"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 mb-4 p-2.5 bg-primary/5 border border-primary/20 rounded-xl hover:bg-primary/10 transition-colors"
+            >
+              <Upload size={12} className="text-primary shrink-0" />
+              <p className="text-[11px] text-primary">Want to use your own photo? Create a Talking Photo in HeyGen →</p>
+            </a>
 
-            {/* Predefined avatars */}
-            {!userPhotoFile && (
-              <>
-                {talkingPhotos.length > 0 && (
-                  <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-2">Talking Photos</p>
-                )}
-                <div className="grid grid-cols-3 gap-2 mb-3">
-                  {talkingPhotos.map(tp => (
-                    <AvatarCard key={tp.talking_photo_id} avatar={tp} selected={selectedAvatar?.id === tp.talking_photo_id} onClick={() => setSelectedAvatar({ type: 'talking_photo', id: tp.talking_photo_id })} />
-                  ))}
-                </div>
-                <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-2">Avatars</p>
-                <div className="grid grid-cols-3 gap-2 max-h-80 overflow-y-auto">
-                  {avatars.map(av => (
-                    <AvatarCard key={av.avatar_id} avatar={av} selected={selectedAvatar?.id === av.avatar_id} onClick={() => setSelectedAvatar({ type: 'avatar', id: av.avatar_id })} />
-                  ))}
-                </div>
-              </>
+            {talkingPhotos.length > 0 && (
+              <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-2">My Talking Photos</p>
             )}
+            <div className="grid grid-cols-3 gap-2 mb-3">
+              {talkingPhotos.map(tp => (
+                <AvatarCard key={tp.talking_photo_id} avatar={tp} selected={selectedAvatar?.id === tp.talking_photo_id} onClick={() => setSelectedAvatar({ type: 'talking_photo', id: tp.talking_photo_id })} />
+              ))}
+            </div>
+            <p className="text-[10px] text-zinc-600 uppercase tracking-wider mb-2">Avatars</p>
+            <div className="grid grid-cols-3 gap-2 max-h-72 overflow-y-auto">
+              {avatars.map(av => (
+                <AvatarCard key={av.avatar_id} avatar={av} selected={selectedAvatar?.id === av.avatar_id} onClick={() => setSelectedAvatar({ type: 'avatar', id: av.avatar_id })} />
+              ))}
+            </div>
           </div>
 
           {/* Col 2: Voice & Script */}
