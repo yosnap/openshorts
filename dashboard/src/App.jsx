@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, FileVideo, Sparkles, Youtube, Instagram, Share2, LogOut, ChevronDown, Check, Activity, LayoutDashboard, Settings, PlusCircle, History, Menu, X, Terminal, Shield, LayoutGrid, Image, Globe, RotateCcw, Calendar } from 'lucide-react';
+import { Upload, FileVideo, Sparkles, Youtube, Instagram, Share2, LogOut, ChevronDown, Check, Activity, LayoutDashboard, Settings, PlusCircle, History, Menu, X, Terminal, Shield, LayoutGrid, Image, Globe, RotateCcw, Calendar, User } from 'lucide-react';
 import KeyInput from './components/KeyInput';
 import MediaInput from './components/MediaInput';
 import ResultCard from './components/ResultCard';
@@ -9,6 +9,7 @@ import ThumbnailStudio from './components/ThumbnailStudio';
 import SaaShortsTab from './components/SaaShortsTab';
 import UGCGallery from './components/UGCGallery';
 import ScheduleWeekModal from './components/ScheduleWeekModal';
+import HeyGenTab from './components/HeyGenTab';
 import { getApiUrl } from './config';
 
 // Enhanced "Encryption" using XOR + Base64 with a Salt
@@ -155,6 +156,13 @@ function App() {
     return '';
   });
 
+  // HeyGen API State - Load encrypted
+  const [heygenKey, setHeygenKey] = useState(() => {
+    const stored = localStorage.getItem('heygenKey_v1');
+    if (stored) return decrypt(stored);
+    return '';
+  });
+
   const [uploadUserId, setUploadUserId] = useState(() => localStorage.getItem('uploadUserId') || '');
   const [userProfiles, setUserProfiles] = useState([]); // List of {username, connected: []}
   const [showKeyModal, setShowKeyModal] = useState(false);
@@ -256,6 +264,11 @@ function App() {
       localStorage.setItem('falKey_v1', encrypt(falKey));
     }
   }, [falKey]);
+
+  useEffect(() => {
+    if (heygenKey) localStorage.setItem('heygenKey_v1', encrypt(heygenKey));
+    else localStorage.removeItem('heygenKey_v1');
+  }, [heygenKey]);
 
   useEffect(() => {
     if (uploadPostKey && userProfiles.length === 0) {
@@ -410,6 +423,14 @@ function App() {
         >
           <Image size={20} />
           <span className="font-medium hidden lg:block">YouTube Studio</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('heygen')}
+          className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-colors ${activeTab === 'heygen' ? 'bg-primary/10 text-primary' : 'text-zinc-400 hover:text-white hover:bg-white/5'}`}
+        >
+          <User size={20} />
+          <span className="font-medium hidden lg:block">Avatar Videos</span>
         </button>
 
         {/* <button
@@ -631,6 +652,52 @@ function App() {
 
               <div className="glass-panel p-6 mt-8">
                 <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-lg font-semibold">HeyGen Avatar Videos</h2>
+                  <span className="text-[10px] bg-primary/10 border border-primary/20 px-2 py-0.5 rounded text-primary uppercase tracking-wider">New</span>
+                </div>
+                <p className="text-xs text-zinc-500 mb-6 leading-relaxed">
+                  Generate 9:16 avatar shorts with <strong>HeyGen</strong> — lip sync, custom voices, or your own photo as a talking avatar.
+                  More cost-effective than alternatives for high-volume content creation.
+                </p>
+                <div className="space-y-4">
+                  <label className="block text-sm text-zinc-400">HeyGen API Key</label>
+                  <div className="flex gap-2">
+                    <input
+                      type="password"
+                      value={heygenKey}
+                      onChange={(e) => setHeygenKey(e.target.value)}
+                      className="input-field"
+                      placeholder="Paste your HeyGen API key..."
+                    />
+                    <button
+                      onClick={() => { if (heygenKey) { localStorage.setItem('heygenKey_v1', encrypt(heygenKey)); alert('HeyGen API Key saved!'); } }}
+                      className="btn-primary py-2 px-4 text-sm"
+                    >
+                      Save
+                    </button>
+                  </div>
+                  <p className="text-xs text-zinc-500 leading-relaxed">
+                    Get your API key from HeyGen to enable avatar video generation.
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <a href="https://app.heygen.com/login" target="_blank" rel="noopener noreferrer" className="p-2 border border-white/5 rounded-lg hover:bg-white/5 transition-colors flex flex-col gap-1">
+                        <span className="text-zinc-400 font-medium">1. Sign Up</span>
+                        <span className="text-[10px] text-zinc-600">Create account</span>
+                      </a>
+                      <a href="https://app.heygen.com/settings?nav=API" target="_blank" rel="noopener noreferrer" className="p-2 border border-white/5 rounded-lg hover:bg-white/5 transition-colors flex flex-col gap-1">
+                        <span className="text-zinc-400 font-medium">2. API Key</span>
+                        <span className="text-[10px] text-zinc-600">Generate key</span>
+                      </a>
+                    </div>
+                    <br />
+                    <span className="text-zinc-600 italic">
+                      Keys are only stored in your browser. Sent to backend only to process requests.
+                    </span>
+                  </p>
+                </div>
+              </div>
+
+              <div className="glass-panel p-6 mt-8">
+                <div className="flex items-center justify-between mb-4">
                   <h2 className="text-lg font-semibold">AI Shorts (UGC Videos)</h2>
                   <span className="text-[10px] bg-violet-500/10 border border-violet-500/20 px-2 py-0.5 rounded text-violet-400 uppercase tracking-wider">New</span>
                 </div>
@@ -695,6 +762,11 @@ function App() {
           {/* View: Thumbnails */}
           {activeTab === 'thumbnails' && (
             <ThumbnailStudio geminiApiKey={apiKey} uploadPostKey={uploadPostKey} uploadUserId={uploadUserId} />
+          )}
+
+          {/* View: HeyGen Avatar Videos */}
+          {activeTab === 'heygen' && (
+            <HeyGenTab heygenApiKey={heygenKey} />
           )}
 
           {/* View: Gallery */}
@@ -821,6 +893,7 @@ function App() {
                           uploadUserId={uploadUserId}
                           geminiApiKey={apiKey}
                           elevenLabsKey={elevenLabsKey}
+                          heygenApiKey={heygenKey}
                           onPlay={(time) => handleClipPlay(time)}
                           onPause={handleClipPause}
                         />

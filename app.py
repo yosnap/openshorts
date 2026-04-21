@@ -1611,6 +1611,7 @@ async def thumbnail_publish_status(publish_id: str):
 # SaaSShorts: AI UGC Video Generator for SaaS Products
 # ═══════════════════════════════════════════════════════════════════════
 
+from heygen import list_avatars, list_voices as list_heygen_voices, upload_asset as heygen_upload_asset, generate_video_sync
 from saasshorts import (
     scrape_website,
     research_saas_online,
@@ -2221,4 +2222,134 @@ async def saasshorts_voices(
             for name, vid in DEFAULT_VOICES.items()
         ],
         "source": "defaults",
+    }
+
+
+# ---------------------------------------------------------------------------
+# HeyGen Avatar Video Endpoints
+# ---------------------------------------------------------------------------
+
+@app.get("/api/heygen/avatars")
+async def heygen_avatars(
+    x_heygen_key: Optional[str] = Header(None, alias="X-HeyGen-Key"),
+):
+    """List available HeyGen avatars and talking photos."""
+    if not x_heygen_key:
+        raise HTTPException(status_code=400, detail="Missing X-HeyGen-Key header")
+    try:
+        loop = asyncio.get_event_loop()
+        result = await loop.run_in_executor(None, list_avatars, x_heygen_key)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/heygen/voices")
+async def heygen_voices(
+    x_heygen_key: Optional[str] = Header(None, alias="X-HeyGen-Key"),
+):
+    """List available HeyGen voices."""
+    if not x_heygen_key:
+        raise HTTPException(status_code=400, detail="Missing X-HeyGen-Key header")
+    try:
+        loop = asyncio.get_event_loop()
+        voices = await loop.run_in_executor(None, list_heygen_voices, x_heygen_key)
+        return {"voices": voices}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/heygen/upload")
+async def heygen_upload(
+    file: UploadFile = File(...),
+    x_heygen_key: Optional[str] = Header(None, alias="X-HeyGen-Key"),
+):
+    """Upload a photo or audio file to HeyGen CDN. Returns asset_id."""
+    if not x_heygen_key:
+        raise HTTPException(status_code=400, detail="Missing X-HeyGen-Key header")
+
+    content_type = file.content_type or "application/octet-stream"
+    allowed_types = {"image/jpeg", "image/png", "audio/mpeg", "audio/mp3", "audio/wav", "audio/x-wav"}
+    if content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail=f"Unsupported file type: {content_type}")
+
+    file_bytes = await file.read()
+    try:
+        loop = asyncio.get_event_loop()
+        asset_id = await loop.run_in_executor(
+            None, heygen_upload_asset, file_bytes, content_type, x_heygen_key
+        )
+        return {"asset_id": asset_id}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+class HeyGenGenerateRequest(BaseModel):
+    mode: str  # "script" | "lipsync"
+    script_text: Optional[str] = None
+    avatar_id: Optional[str] = None
+    talking_photo_id: Optional[str] = None
+    voice_id: Optional[str] = None
+    audio_asset_id: Optional[str] = None
+    background_color: str = "#000000"
+
+
+@app.post("/api/heygen/generate")
+async def heygen_generate(
+    req: HeyGenGenerateRequest,
+    x_heygen_key: Optional[str] = Header(None, alias="X-HeyGen-Key"),
+):
+    """
+    Generate a 9:16 avatar video with HeyGen.
+    Returns job_id for polling via /api/heygen/status/{job_id}.
+    """
+    if not x_heygen_key:
+        raise HTTPException(status_code=400, detail="Missing X-HeyGen-Key header")
+
+    if req.mode == "script" and not (req.script_text and req.voice_id):
+        raise HTTPException(status_code=400, detail="script mode requires script_text and voice_id")
+    if req.mode == "lipsync" and not req.audio_asset_id:
+        raise HTTPException(status_code=400, detail="lipsync mode requires audio_asset_id")
+    if not req.avatar_id and not req.talking_photo_id:
+        raise HTTPException(status_code=400, detail="Either avatar_id or talking_photo_id is required")
+
+    job_id = str(uuid.uuid4())
+    jobs[job_id] = {"status": "processing", "logs": [], "results": [], "provider": "heygen"}
+
+    def run_heygen():
+        try:
+            jobs[job_id]["logs"].append("[HeyGen] Starting video generation...")
+            result = generate_video_sync(
+                api_key=x_heygen_key,
+                script_text=req.script_text,
+                voice_id=req.voice_id,
+                avatar_id=req.avatar_id,
+                talking_photo_id=req.talking_photo_id,
+                audio_asset_id=req.audio_asset_id,
+                background_color=req.background_color,
+            )
+            jobs[job_id]["status"] = "completed"
+            jobs[job_id]["results"] = [result]
+            jobs[job_id]["logs"].append("[HeyGen] Video generation completed!")
+        except Exception as e:
+            jobs[job_id]["status"] = "failed"
+            jobs[job_id]["error"] = str(e)
+            jobs[job_id]["logs"].append(f"[HeyGen] Error: {e}")
+
+    threading.Thread(target=run_heygen, daemon=True).start()
+    return {"job_id": job_id}
+
+
+@app.get("/api/heygen/status/{job_id}")
+async def heygen_status(job_id: str):
+    """Poll the status of a HeyGen generation job."""
+    if job_id not in jobs:
+        raise HTTPException(status_code=404, detail="Job not found")
+    job = jobs[job_id]
+    return {
+        "status": job.get("status"),
+        "logs": job.get("logs", []),
+        "results": job.get("results", []),
+        "error": job.get("error"),
+        "provider": "heygen",
     }
